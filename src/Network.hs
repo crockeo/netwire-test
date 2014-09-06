@@ -22,22 +22,22 @@ speed :: Float
 speed = 0.1
 
 {-|
+  The initial position.
+-}
+initPos :: Vector Float
+initPos = Vector 0 0
+
+{-|
   The time since the program started.
 -}
 timeFloat :: HasTime t s => Wire s e IO a Float
 timeFloat = timeF
 
 {-|
-  The permanant position of the dot.
--}
-initPos :: Wire s e IO a (Vector Float)
-initPos = pure $ pure 0
-
-{-|
   The moving position of the dot.
 -}
 movPos :: HasTime t s => Wire s e IO a (Vector Float)
-movPos = liftA2 (^+>) initPos $ fmap (* speed) timeFloat
+movPos = pure (^+>) <*> pure initPos <*> fmap (speed *) timeFloat
 
 {-|
   The internal function for running the network.
