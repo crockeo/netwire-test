@@ -60,3 +60,12 @@ infixl 6 ^+>
 infixl 7 ^*>
 (^*>) :: Num a => Vector a -> a -> Vector a
 (^*>) v n = v ^* pure n
+
+{-|
+  Directions on a 2D plane.
+-}
+upDir, downDir, leftDir, rightDir :: Num a => Vector a
+upDir    = Vector ( 0) ( 1)
+downDir  = Vector ( 0) (-1)
+leftDir  = Vector (-1) ( 0)
+rightDir = Vector ( 1) ( 0)

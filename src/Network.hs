@@ -19,7 +19,7 @@ import Math
   The speed in which the dot should move.
 -}
 speed :: Float
-speed = 0.1
+speed = 0.5
 
 {-|
   The initial position.
@@ -28,21 +28,33 @@ initPos :: Vector Float
 initPos = Vector 0 0
 
 {-|
-  The time since the program started.
+  Making the stateful position.
 -}
-timeFloat :: HasTime t s => Wire s e IO a Float
-timeFloat = timeF
+watPos :: Vector Float -> Wire (Timed NominalDiffTime ()) e IO a (Vector Float)
+watPos v =
+  mkGen $ \(Timed t ()) _ -> do
+    goup    <- fmap (== Press) $ getKey $ CharKey 'W'
+    godown  <- fmap (== Press) $ getKey $ CharKey 'S'
+    goleft  <- fmap (== Press) $ getKey $ CharKey 'A'
+    goright <- fmap (== Press) $ getKey $ CharKey 'D'
 
-{-|
-  The moving position of the dot.
--}
-movPos :: HasTime t s => Wire s e IO a (Vector Float)
-movPos = pure (^+>) <*> pure initPos <*> fmap (speed *) timeFloat
+    let v' = flatten (pure 0) [ (goup   , upDir   )
+                              , (godown , downDir )
+                              , (goleft , leftDir )
+                              , (goright, rightDir)
+                              ]
+        v'' = v ^+ v' ^*> speed ^*> realToFrac t
+
+    return (Right v'', watPos v'')
+  where flatten :: Num a => Vector a -> [(Bool, Vector a)] -> Vector a
+        flatten v []              = v
+        flatten v ((False, _):xs) = flatten v xs
+        flatten v ((True , d):xs) = flatten (v ^+ d) xs
 
 {-|
   The internal function for running the network.
 -}
-runNetwork' :: (HasTime t s, Renderable b) => IORef Bool -> Session IO s -> Wire s e IO a b -> IO ()
+runNetwork' :: Renderable b => IORef Bool -> Session IO (Timed NominalDiffTime ()) -> Wire (Timed NominalDiffTime ()) e IO a b -> IO ()
 runNetwork' closedRef session wire = do
   closed <- readIORef closedRef
   if closed
@@ -66,4 +78,4 @@ runNetwork' closedRef session wire = do
 -}
 runNetwork :: IORef Bool -> IO ()
 runNetwork closedRef =
-  runNetwork' closedRef clockSession_ movPos
+  runNetwork' closedRef clockSession_ $ watPos $ pure 0
