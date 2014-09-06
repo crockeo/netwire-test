@@ -3,6 +3,7 @@ module Renderable where
 --------------------
 -- Global Imports --
 import Graphics.Rendering.OpenGL
+import Control.Monad
 
 -------------------
 -- Local Imports --
@@ -26,7 +27,18 @@ class Renderable a where
 {-|
   Rendering a point (in @'Vector'@ form).
 -}
-instance Real a => Renderable (Vector a) where
-  render (Vector x y) =
-    renderPrimitive Points $
-      vertex $ Vertex2 (realToFrac x :: GLfloat) (realToFrac y :: GLfloat)
+s :: RealFrac a => a
+s = 0.05
+
+generatePoints :: RealFrac a => Vector a -> [Vector a]
+generatePoints (Vector x y) = [ Vector (x - s) (y - s)
+                              , Vector (x + s) (y - s)
+                              , Vector (x + s) (y + s)
+                              , Vector (x - s) (y + s)
+                              ]
+
+instance RealFrac a => Renderable (Vector a) where
+  render v =
+    renderPrimitive Quads $
+      forM_ (generatePoints v) $ \(Vector x y) ->
+        vertex $ Vertex2 (realToFrac x :: GLfloat) (realToFrac y :: GLfloat)
