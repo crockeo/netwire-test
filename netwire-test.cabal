@@ -15,7 +15,10 @@ cabal-version:       >=1.10
 executable netwire-test
   main-is:             Main.hs
 
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base    == 4.7.*
+               ,       netwire == 0.5.0.0
+               ,       GLFW    == 0.5.2.2
+               ,       OpenGL
 
   hs-source-dirs:      src/
 
