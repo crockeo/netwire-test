@@ -50,14 +50,28 @@ goDir v d =
       (Right v', goDir v' d)
 
 {-|
+  The x-velocity of the block.
+-}
+xGameVelocity :: Monoid s => Wire s () IO a (Vector Float)
+xGameVelocity  =  pure (Vector 0 0)         . isKeyDown (CharKey 'A') . isKeyDown (CharKey 'D')
+              <|> pure (leftDir  ^*> speed) . isKeyDown (CharKey 'A')
+              <|> pure (rightDir ^*> speed) . isKeyDown (CharKey 'D')
+              <|> pure (Vector 0 0)
+
+{-|
+  The y-velocity of the block.
+-}
+yGameVelocity :: Monoid s => Wire s () IO a (Vector Float)
+yGameVelocity  =  pure (Vector 0 0)        . isKeyDown (CharKey 'W') . isKeyDown (CharKey 'S')
+              <|> pure (upDir   ^*> speed) . isKeyDown (CharKey 'W')
+              <|> pure (downDir ^*> speed) . isKeyDown (CharKey 'S')
+              <|> pure (Vector 0 0)
+
+{-|
   The velocity of the block.
 -}
 gameVelocity :: HasTime t s => Wire s () IO a (Vector Float)
-gameVelocity  =  pure (upDir    ^*> speed) . isKeyDown (CharKey 'W')
-             <|> pure (downDir  ^*> speed) . isKeyDown (CharKey 'S')
-             <|> pure (leftDir  ^*> speed) . isKeyDown (CharKey 'A')
-             <|> pure (rightDir ^*> speed) . isKeyDown (CharKey 'D')
-             <|> pure (Vector 0 0)
+gameVelocity  = liftA2 (^+) xGameVelocity yGameVelocity
 
 {-|
   The @'integral'@ but written on a Vector.
@@ -101,4 +115,4 @@ runNetwork' closedRef session wire = do
 -}
 runNetwork :: IORef Bool -> IO ()
 runNetwork closedRef =
-  runNetwork' closedRef clockSession_ $ game $ pure 0
+  runNetwork' closedRef clockSession_ $ game initPos
