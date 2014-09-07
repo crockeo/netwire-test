@@ -50,7 +50,8 @@ isKeyDown k =
   The x-acceleration of the block.
 -}
 xAcceleration :: (HasTime t s, Monoid s) => Wire s () IO a (Vector Float)
-xAcceleration  =  pure (leftDir  ^*> acceleration) . isKeyDown (CharKey 'A')
+xAcceleration  =  pure (Vector 0 0)                . isKeyDown (CharKey 'A') . isKeyDown (CharKey 'D')
+              <|> pure (leftDir  ^*> acceleration) . isKeyDown (CharKey 'A')
               <|> pure (rightDir ^*> acceleration) . isKeyDown (CharKey 'D')
               <|> pure (Vector 0 0)
 
@@ -58,7 +59,8 @@ xAcceleration  =  pure (leftDir  ^*> acceleration) . isKeyDown (CharKey 'A')
   The y-acceleration of the block.
 -}
 yAcceleration :: Monoid s => Wire s () IO a (Vector Float)
-yAcceleration  =  pure (upDir   ^*> acceleration) . isKeyDown (CharKey 'W')
+yAcceleration  =  pure (Vector 0 0)               . isKeyDown (CharKey 'W') . isKeyDown (CharKey 'S')
+              <|> pure (upDir   ^*> acceleration) . isKeyDown (CharKey 'W')
               <|> pure (downDir ^*> acceleration) . isKeyDown (CharKey 'S')
               <|> pure (Vector 0 0)
 
