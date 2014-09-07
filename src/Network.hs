@@ -27,7 +27,7 @@ speed = 0.5
   The initial position.
 -}
 initPos :: Vector Float
-initPos = Vector 0 0
+initPos = Vector 0.5 0
 
 {-|
   Checking if a given key is down.
@@ -39,15 +39,6 @@ isKeyDown k =
     case p of
       Press   -> return $ Right ()
       Release -> return $ Left ()
-
-{-|
-  Going up.
--}
-goDir :: HasTime t s => Vector Float -> Vector Float -> Wire s () IO a (Vector Float)
-goDir v d =
-  mkPure $ \dt _ -> do
-    let v' = v ^+ d ^*> speed ^*> realToFrac (dtime dt) in
-      (Right v', goDir v' d)
 
 {-|
   The x-velocity of the block.
@@ -71,7 +62,8 @@ yGameVelocity  =  pure (Vector 0 0)        . isKeyDown (CharKey 'W') . isKeyDown
   The velocity of the block.
 -}
 gameVelocity :: HasTime t s => Wire s () IO a (Vector Float)
-gameVelocity  = liftA2 (^+) xGameVelocity yGameVelocity
+gameVelocity  = liftA2 (^+) xGameVelocity
+                            yGameVelocity
 
 {-|
   The @'integral'@ but written on a Vector.
@@ -85,8 +77,8 @@ vIntegral v =
 {-|
   The game.
 -}
-game :: HasTime t s => Vector Float -> Wire s () IO a (Vector Float)
-game v = vIntegral v . gameVelocity
+game :: HasTime t s => Wire s () IO a (Vector Float)
+game = vIntegral initPos . gameVelocity
 
 {-|
   The internal function for running the network.
@@ -115,4 +107,4 @@ runNetwork' closedRef session wire = do
 -}
 runNetwork :: IORef Bool -> IO ()
 runNetwork closedRef =
-  runNetwork' closedRef clockSession_ $ game initPos
+  runNetwork' closedRef clockSession_ game
