@@ -20,14 +20,20 @@ import Math
 {-|
   The speed in which the dot should move.
 -}
-speed :: Float
-speed = 0.5
+maxSpeed :: Float
+maxSpeed = 1.0
+
+{-|
+  The speed in which the user accelerates.
+-}
+acceleration :: Float
+acceleration = 2.0
 
 {-|
   The initial position.
 -}
 initPos :: Vector Float
-initPos = Vector 0.5 0
+initPos = Vector 0.0 0.0
 
 {-|
   Checking if a given key is down.
@@ -41,29 +47,27 @@ isKeyDown k =
       Release -> return $ Left ()
 
 {-|
-  The x-velocity of the block.
+  The x-acceleration of the block.
 -}
-xGameVelocity :: Monoid s => Wire s () IO a (Vector Float)
-xGameVelocity  =  pure (Vector 0 0)         . isKeyDown (CharKey 'A') . isKeyDown (CharKey 'D')
-              <|> pure (leftDir  ^*> speed) . isKeyDown (CharKey 'A')
-              <|> pure (rightDir ^*> speed) . isKeyDown (CharKey 'D')
+xAcceleration :: (HasTime t s, Monoid s) => Wire s () IO a (Vector Float)
+xAcceleration  =  pure (leftDir  ^*> acceleration) . isKeyDown (CharKey 'A')
+              <|> pure (rightDir ^*> acceleration) . isKeyDown (CharKey 'D')
               <|> pure (Vector 0 0)
 
 {-|
-  The y-velocity of the block.
+  The y-acceleration of the block.
 -}
-yGameVelocity :: Monoid s => Wire s () IO a (Vector Float)
-yGameVelocity  =  pure (Vector 0 0)        . isKeyDown (CharKey 'W') . isKeyDown (CharKey 'S')
-              <|> pure (upDir   ^*> speed) . isKeyDown (CharKey 'W')
-              <|> pure (downDir ^*> speed) . isKeyDown (CharKey 'S')
+yAcceleration :: Monoid s => Wire s () IO a (Vector Float)
+yAcceleration  =  pure (upDir   ^*> acceleration) . isKeyDown (CharKey 'W')
+              <|> pure (downDir ^*> acceleration) . isKeyDown (CharKey 'S')
               <|> pure (Vector 0 0)
 
 {-|
   The velocity of the block.
 -}
 gameVelocity :: HasTime t s => Wire s () IO a (Vector Float)
-gameVelocity  = liftA2 (^+) xGameVelocity
-                            yGameVelocity
+gameVelocity  = liftA2 (^+) (vIntegral (pure 0) . xAcceleration)
+                            (vIntegral (pure 0) . yAcceleration)
 
 {-|
   The @'integral'@ but written on a Vector.
