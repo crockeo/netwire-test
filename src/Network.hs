@@ -4,7 +4,9 @@ module Network (runNetwork) where
 -- Global Imports --
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLFW as GLFW
+import Prelude hiding ((.))
 import Control.Wire
+import FRP.Netwire
 import Data.IORef
 
 -------------------
@@ -28,33 +30,54 @@ initPos :: Vector Float
 initPos = Vector 0 0
 
 {-|
-  Making the stateful position.
+  Checking if a given key is down.
 -}
-watPos :: Vector Float -> Wire (Timed NominalDiffTime ()) e IO a (Vector Float)
-watPos v =
-  mkGen $ \(Timed t ()) _ -> do
-    goup    <- fmap (== Press) $ getKey $ CharKey 'W'
-    godown  <- fmap (== Press) $ getKey $ CharKey 'S'
-    goleft  <- fmap (== Press) $ getKey $ CharKey 'A'
-    goright <- fmap (== Press) $ getKey $ CharKey 'D'
+isKeyDown :: (Enum k, Monoid s) => k -> Wire s () IO a ()
+isKeyDown k =
+  mkGen_ $ \_ -> do
+    p <- getKey k
+    case p of
+      Press   -> return $ Right ()
+      Release -> return $ Left ()
 
-    let v' = flatten (pure 0) [ (goup   , upDir   )
-                              , (godown , downDir )
-                              , (goleft , leftDir )
-                              , (goright, rightDir)
-                              ]
-        v'' = v ^+ v' ^*> speed ^*> realToFrac t
+{-|
+  Going up.
+-}
+goDir :: HasTime t s => Vector Float -> Vector Float -> Wire s () IO a (Vector Float)
+goDir v d =
+  mkPure $ \dt _ -> do
+    let v' = v ^+ d ^*> speed ^*> realToFrac (dtime dt) in
+      (Right v', goDir v' d)
 
-    return (Right v'', watPos v'')
-  where flatten :: Num a => Vector a -> [(Bool, Vector a)] -> Vector a
-        flatten v []              = v
-        flatten v ((False, _):xs) = flatten v xs
-        flatten v ((True , d):xs) = flatten (v ^+ d) xs
+{-|
+  The velocity of the block.
+-}
+gameVelocity :: HasTime t s => Wire s () IO a (Vector Float)
+gameVelocity  =  pure (upDir    ^*> speed) . isKeyDown (CharKey 'W')
+             <|> pure (downDir  ^*> speed) . isKeyDown (CharKey 'S')
+             <|> pure (leftDir  ^*> speed) . isKeyDown (CharKey 'A')
+             <|> pure (rightDir ^*> speed) . isKeyDown (CharKey 'D')
+             <|> pure (Vector 0 0)
+
+{-|
+  The @'integral'@ but written on a Vector.
+-}
+vIntegral :: (Fractional a, HasTime t s) => Vector a -> Wire s e m (Vector a) (Vector a)
+vIntegral v =
+  mkPure $ \ds d ->
+    let dt = realToFrac $ dtime ds in
+      (Right v, vIntegral $ v ^+ (d ^*> dt))
+
+{-|
+  The game.
+-}
+game :: HasTime t s => Vector Float -> Wire s () IO a (Vector Float)
+game v = vIntegral v . gameVelocity
 
 {-|
   The internal function for running the network.
 -}
-runNetwork' :: Renderable b => IORef Bool -> Session IO (Timed NominalDiffTime ()) -> Wire (Timed NominalDiffTime ()) e IO a b -> IO ()
+runNetwork' :: (HasTime t s, Renderable b) => IORef Bool -> Session IO s -> Wire s e IO a b -> IO ()
 runNetwork' closedRef session wire = do
   closed <- readIORef closedRef
   if closed
@@ -78,4 +101,4 @@ runNetwork' closedRef session wire = do
 -}
 runNetwork :: IORef Bool -> IO ()
 runNetwork closedRef =
-  runNetwork' closedRef clockSession_ $ watPos $ pure 0
+  runNetwork' closedRef clockSession_ $ game $ pure 0
